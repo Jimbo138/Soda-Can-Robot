@@ -1,3 +1,10 @@
+/*	
+ *	Soda Can Robot Version 1
+ *	A Discord Voice Robot
+ *	By Jimbo138
+ *	Requires Node.js, Discord.js
+ */	
+
 var Discord = require("discord.js");
 var bot = new Discord.Client();
 
