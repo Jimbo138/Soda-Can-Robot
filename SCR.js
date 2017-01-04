@@ -26,9 +26,9 @@ var currentConnection;
 // joins or leaves channels, or executes commands.
 var debugMode = true;
 
-// The following should lead to the folder on your computer that contains the sounds
-// that you want the bot to play over voice channels.
-var audioDirectory = "";
+// The following should lead to the folders on your computer that contain the sounds
+// and music that you want the bot to play over voice channels.
+var audioDirectory = ""
 
 // pre:		filesArray is an array of strings
 //				fileName is a string
@@ -46,12 +46,12 @@ function contains(filesArray, fileName) {
 // post:	plays the audio of the file that has the same name as fileName
 //				if bot is not connected to a voice channel, or fileName is invalid,
 //				bot will post this in the chat channel that msg originated from. 	
-function play(fileName, msg) {
+function play(fileName, msg, inputDirectory) {
 	if (currentConnection != null) {
-		fs.readdir(audioDirectory, (err, files) => {
+		fs.readdir(inputDirectory, (err, files) => {
 			if (contains(files, fileName)) {
 				if (debugMode) console.log("Playing sound:        " + fileName);
-				currentConnection.playFile(audioDirectory + fileName);
+				currentConnection.playFile(inputDirectory + fileName);
 			} else {
 				if (debugMode) console.log("Nonexistent request:  " + fileName);
 				msg.channel.sendMessage("Sorry, that file does not exist.");
@@ -67,14 +67,28 @@ function play(fileName, msg) {
 //				The bot has the proper permissions to join the voice channel
 // post: 	The bot will join the voiceChannel
 function joinChannel(voiceChannel) {
+	// if we are currently connected to a voice channel, we must disconnect before attempting
+	// to join another channel.
+	if (currentConnection != null) {
+		currentConnection.disconnect();
+		currentConnection = null;
+	}
+	// try/catch for joining a channel, in case an unforeseen error occurs.
 	try {
-		voiceChannel.join().then(connection => { 
+		voiceChannel.join().then(connection => {
 			currentConnection = connection; 
 		});
-		if (debugMode) console.log("Joined voice channel: " + voiceChannel.name);
-		return true;
 	} catch (err) {
-		console.log(err.message);
+		console.log("voiceChannel.join() method error: " + err.message);
+		return false;
+	}
+	// if currentConnections.array().length > 0 that means that we are currently connected to at 
+	// least 1 server and must return true. False will be returned if it is 0 and we are not connected
+	// to any voice channels.
+	if (bot.voiceConnections.array().length > 0) {
+		if (debugmode) console.log("Joined voice channel: " + voiceChannel.name);
+		return true;
+	} else {
 		return false;
 	}
 }
@@ -83,25 +97,37 @@ function joinChannel(voiceChannel) {
 bot.on("message", msg => {
 	// ignore messages sent by bots or sent through direct messages.
 	if (!msg.author.bot | msg.channel.type != 'dm') {
-		if (msg.content.startsWith(commandPrefix)) { 
+		if (msg.content.startsWith(commandPrefix)) {
 			// Attempts to join the voice channel the
 			// message's sender is connected to, if the sender
 			// is connected to a voice channel at all.
-			if (msg.content.toLowerCase() === commandPrefix + "join") { 
+			if (msg.content.toLowerCase() === commandPrefix + "join") {
 				if (debugMode) console.log("ATTEMPTING TO JOIN A CHANNEL");
-				msg.channel.sendMessage("Attempting to join " + msg.author.username + "'s voice channel.");
+				msg.reply("Attempting to join your voice channel.");
 				if (joinChannel(msg.member.voiceChannel)) {
-					if (debugMode) console.log("  SUCCESS");
 					msg.channel.sendMessage("Success.");
+					if (debugMode) console.log("  SUCCESS");
 				} else {
-					if (debugMode) console.log("  FAILURE");
 					msg.channel.sendMessage("Error, could not join.");
+					if (debugMode) console.log("  FAILURE");
+				}
+			}
+			else if (msg.content.toLowerCase().startsWith(commandPrefix + "eval:") &
+					msg.author.id === "202284467929219072") {
+				try {
+					eval(msg.content.substring(6));
+					if (debugMode) console.log("EVALUATED:   " + msg.content.substring(6));
+				} catch (e) {
+					msg.channel.sendMessage(e.message);
+					console.log("eval error:")
+					console.log("code:       " + msg.content.substring(6));
+					console.log("message:     " + e.message);
 				}
 			}
 			
 			// plays a blank sound file to override any 
 			// currently playing sounds.
-			if (msg.content.toLowerCase() === commandPrefix + "silence" |
+			else if (msg.content.toLowerCase() === commandPrefix + "silence" |
 					msg.content.toLowerCase() === commandPrefix + "stop" |
 					msg.content.toLowerCase() === commandPrefix + "s") {
 				if (debugMode) console.log("  Silencing");
@@ -114,7 +140,8 @@ bot.on("message", msg => {
 			
 			// Leaves the current voice channel if connected, 
 			// and sets currentConnection to null.
-			if (msg.content.toLowerCase() === commandPrefix + "leave") {
+			else if (msg.content.toLowerCase() === commandPrefix + "leave" |
+							msg.content.toLowerCase() === commandPrefix + "disconnect") {
 				if (currentConnection != null) {
 					if (debugMode) console.log("LEAVING VOICE CHANNEL");
 					msg.channel.sendMessage("Leaving voice channel.");
@@ -124,25 +151,30 @@ bot.on("message", msg => {
 			}
 			
 			// Shuts the bot down.
-			if (msg.content.toLowerCase() === commandPrefix + "shutdown") { 
+			else if (msg.content.toLowerCase() === commandPrefix + "shutdown") {
 				if (debugMode) console.log("SHUTTING DOWN");
 				msg.channel.sendMessage("Goodbye.");
+				if (currentConnection != null) currentConnection.disconnect();
 				bot.destroy();
 			}
 			
 			// Plays a random sound
-			if (msg.content.toLowerCase() === commandPrefix + "random") {
+			else if (msg.content.toLowerCase() === commandPrefix + "random") {
 				fs.readdir(audioDirectory, (err, files) => {
 					let fileName = files[math.randomInt(0, files.length - 1)];
 					if (debugMode) console.log("Attempting to play a random sound.");
-					play(fileName, msg);
+					play(fileName, msg, audioDirectory);
 				});
 			}
 			
 			// sends a message containing all files that can be played
 			// to the same text channel the request was received from.
-			if (msg.content.toLowerCase() === commandPrefix + "index") {
-				fs.readdir(audioDirectory, (err, files) => {
+			else if (msg.content.toLowerCase().startsWith(commandPrefix + "index")) {
+				let inputDirectory = audioDirectory;
+				if (msg.content.substring(msg.content.length - 7) == "boosted") {
+					inputDirectory += "boosted/";
+				}
+				fs.readdir(inputDirectory, (err, files) => {
 					if (debugMode) console.log("Serving INDEX");
 					msg.channel.sendMessage("```" + files.toString().replace(/,/g, "\n") + "```");
 				});
@@ -150,17 +182,22 @@ bot.on("message", msg => {
 			
 			// sends a message containing information on how to use the
 			// bot to the same text channel the request was received from.
-			if (msg.content.toLowerCase() === commandPrefix + "help") {
+			else if (msg.content.toLowerCase() === commandPrefix + "help") {
 				if (debugMode) console.log("Serving HELP");
 				msg.channel.sendMessage("```Availible commands: \n" + 
 					"'" + commandPrefix + "help' will display this menu (in case you didn't already know)\n" +
 					"'" + commandPrefix + "join' will make me join your voice channel\n" + 
 					"'" + commandPrefix + "leave' will make me disconnect from voice\n" + 
 					"'" + commandPrefix + "index' will display all sounds that you can play\n" + 
+					"'" + commandPrefix + "index boosted' will display all boosted sounds you can play\n" + 
 					"'" + commandPrefix + "random' will play a random sound\n" + 
 					"'" + commandPrefix + "silence' will make me be quiet\n" + 
 					"'" + playPrefix + "' followed by a valid file name will play a sound" +
 					"```")
+			}
+			
+			else {
+				msg.channel.sendMessage("Command not recognized.");
 			}
 		// attempts to play the a file with the name matching the
 		// string following the playPrefix.
@@ -169,7 +206,12 @@ bot.on("message", msg => {
 			if (fileName.substring(fileName.length - 4) !== ".mp3") {
 				fileName = fileName + ".mp3";
 			}
-			play(fileName, msg);
+			let inputDirectory = audioDirectory;
+			if (fileName.substring(0,8) == "boosted/" & msg.author.id === "202284467929219072") {
+				inputDirectory += "boosted/";
+				fileName = fileName.substring(8);
+			}
+			play(fileName, msg, inputDirectory);
 		}
 	}
 });
