@@ -96,8 +96,12 @@ bot.on("message", msg => {
 			if (msg.content.toLowerCase() === commandPrefix + "join") {
 				if (debugMode) console.log("ATTEMPTING TO JOIN A CHANNEL");
 				msg.reply("Attempting to join your voice channel.");
-				if (!joinChannel(msg.member.voiceChannel)) {
-					msg.reply("Could not join due to error: " + err.message);
+				if (msg.member.voiceChannel != null) {
+					if (!joinChannel(msg.member.voiceChannel)) {
+						msg.reply("Could not join due to error: " + err.message);
+					}
+				} else {
+					msg.reply("Error! You are not connected to a voice channel that I can see.");
 				}
 				msg.reply("Attempt completed.");
 			}
