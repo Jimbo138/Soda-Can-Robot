@@ -26,9 +26,9 @@ var currentConnection;
 // joins or leaves channels, or executes commands.
 var debugMode = true;
 
-// The following should lead to the folders on your computer that contain the sounds
+// The following should lead to the folder on your computer that contains the sounds
 // and music that you want the bot to play over voice channels.
-var audioDirectory = ""
+var audioDirectory = "C:/Users/Jimmy/Documents/Code/Discord Bot/Discord Audio/";
 
 // pre:		filesArray is an array of strings
 //				fileName is a string
@@ -82,15 +82,7 @@ function joinChannel(voiceChannel) {
 		console.log("voiceChannel.join() method error: " + err.message);
 		return false;
 	}
-	// if currentConnections.array().length > 0 that means that we are currently connected to at 
-	// least 1 server and must return true. False will be returned if it is 0 and we are not connected
-	// to any voice channels.
-	if (bot.voiceConnections.array().length > 0) {
-		if (debugmode) console.log("Joined voice channel: " + voiceChannel.name);
-		return true;
-	} else {
-		return false;
-	}
+	return true;
 }
 
 // Fires every time the bot sees a message.
@@ -104,14 +96,12 @@ bot.on("message", msg => {
 			if (msg.content.toLowerCase() === commandPrefix + "join") {
 				if (debugMode) console.log("ATTEMPTING TO JOIN A CHANNEL");
 				msg.reply("Attempting to join your voice channel.");
-				if (joinChannel(msg.member.voiceChannel)) {
-					msg.channel.sendMessage("Success.");
-					if (debugMode) console.log("  SUCCESS");
-				} else {
-					msg.channel.sendMessage("Error, could not join.");
-					if (debugMode) console.log("  FAILURE");
+				if (!joinChannel(msg.member.voiceChannel)) {
+					msg.reply("Could not join due to error: " + err.message);
 				}
+				msg.reply("Attempt completed.");
 			}
+			
 			else if (msg.content.toLowerCase().startsWith(commandPrefix + "eval:") &
 					msg.author.id === "202284467929219072") {
 				try {
