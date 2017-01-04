@@ -1,9 +1,9 @@
-/*	
+/*
  *	Soda Can Robot Version 6
  *	A Discord Voice Robot
  *	By Jimbo138
- *	Requires Node.js, Discord.js, ffmpeg, mathjs, nope-opus, and opusscript
- */	
+ *	Requires Node.js, Discord.js version 11, ffmpeg, mathjs, nope-opus, and opusscript
+ */
 
 // used to scan for sound files in specified folders
 var fs = require("fs");
@@ -45,15 +45,15 @@ function contains(filesArray, fileName) {
 //				fileName is a string
 // post:	plays the audio of the file that has the same name as fileName
 //				if bot is not connected to a voice channel, or fileName is invalid,
-//				bot will post this in the chat channel that msg originated from. 	
+//				bot will post this in the chat channel that msg originated from.
 function play(fileName, msg, inputDirectory) {
 	if (currentConnection != null) {
 		fs.readdir(inputDirectory, (err, files) => {
 			if (contains(files, fileName)) {
-				if (debugMode) console.log("Playing sound:        " + fileName);
+				if (debugMode) console.log("Playing sound:    " + fileName);
 				currentConnection.playFile(inputDirectory + fileName);
 			} else {
-				if (debugMode) console.log("Nonexistent request:  " + fileName);
+				if (debugMode) console.log("Invalid sound:    " + fileName);
 				msg.channel.sendMessage("Sorry, that file does not exist.");
 			}
 		});
@@ -77,7 +77,7 @@ function joinChannel(voiceChannel) {
 		// try/catch for joining a channel, in case an unforeseen error occurs.
 		try {
 			voiceChannel.join().then(connection => {
-				currentConnection = connection; 
+				currentConnection = connection;
 			});
 		} catch (err) {
 			console.log("voiceChannel.join() method error: " + err.message);
@@ -111,7 +111,7 @@ bot.on("message", msg => {
 				}
 				msg.reply("Attempt completed.");
 			}
-			
+
 			else if (msg.content.toLowerCase().startsWith(commandPrefix + "eval:") &
 					msg.author.id === "202284467929219072") {
 				try {
@@ -124,8 +124,8 @@ bot.on("message", msg => {
 					console.log("message:     " + e.message);
 				}
 			}
-			
-			// plays a blank sound file to override any 
+
+			// plays a blank sound file to override any
 			// currently playing sounds.
 			else if (msg.content.toLowerCase() === commandPrefix + "silence" |
 					msg.content.toLowerCase() === commandPrefix + "stop" |
@@ -137,8 +137,8 @@ bot.on("message", msg => {
 					currentConnection.playFile(audioDirectory + "../silence.mp3");
 				}
 			}
-			
-			// Leaves the current voice channel if connected, 
+
+			// Leaves the current voice channel if connected,
 			// and sets currentConnection to null.
 			else if (msg.content.toLowerCase() === commandPrefix + "leave" |
 							msg.content.toLowerCase() === commandPrefix + "disconnect") {
@@ -149,7 +149,7 @@ bot.on("message", msg => {
 					currentConnection = null;
 				}
 			}
-			
+
 			// Shuts the bot down.
 			else if (msg.content.toLowerCase() === commandPrefix + "shutdown") {
 				if (debugMode) console.log("SHUTTING DOWN");
@@ -157,7 +157,7 @@ bot.on("message", msg => {
 				if (currentConnection != null) currentConnection.disconnect();
 				bot.destroy();
 			}
-			
+
 			// Plays a random sound
 			else if (msg.content.toLowerCase() === commandPrefix + "random") {
 				fs.readdir(audioDirectory, (err, files) => {
@@ -166,7 +166,7 @@ bot.on("message", msg => {
 					play(fileName, msg, audioDirectory);
 				});
 			}
-			
+
 			// sends a message containing all files that can be played
 			// to the same text channel the request was received from.
 			else if (msg.content.toLowerCase().startsWith(commandPrefix + "index")) {
@@ -179,23 +179,23 @@ bot.on("message", msg => {
 					msg.channel.sendMessage("```" + files.toString().replace(/,/g, "\n") + "```");
 				});
 			}
-			
+
 			// sends a message containing information on how to use the
 			// bot to the same text channel the request was received from.
 			else if (msg.content.toLowerCase() === commandPrefix + "help") {
 				if (debugMode) console.log("Serving HELP");
-				msg.channel.sendMessage("```Availible commands: \n" + 
+				msg.channel.sendMessage("```Availible commands: \n" +
 					"'" + commandPrefix + "help' will display this menu (in case you didn't already know)\n" +
-					"'" + commandPrefix + "join' will make me join your voice channel\n" + 
-					"'" + commandPrefix + "leave' will make me disconnect from voice\n" + 
-					"'" + commandPrefix + "index' will display all sounds that you can play\n" + 
-					"'" + commandPrefix + "index boosted' will display all boosted sounds you can play\n" + 
-					"'" + commandPrefix + "random' will play a random sound\n" + 
-					"'" + commandPrefix + "silence' will make me be quiet\n" + 
+					"'" + commandPrefix + "join' will make me join your voice channel\n" +
+					"'" + commandPrefix + "leave' will make me disconnect from voice\n" +
+					"'" + commandPrefix + "index' will display all sounds that you can play\n" +
+					"'" + commandPrefix + "index boosted' will display all boosted sounds you can play\n" +
+					"'" + commandPrefix + "random' will play a random sound\n" +
+					"'" + commandPrefix + "silence' will make me be quiet\n" +
 					"'" + playPrefix + "' followed by a valid file name will play a sound" +
 					"```")
 			}
-			
+
 			else {
 				msg.channel.sendMessage("Command not recognized.");
 			}
