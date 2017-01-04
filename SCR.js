@@ -1,5 +1,5 @@
 /*	
- *	Soda Can Robot Version 4
+ *	Soda Can Robot Version 5.5
  *	A Discord Voice Robot
  *	By Jimbo138
  *	Requires Node.js, Discord.js, ffmpeg, and mathjs
