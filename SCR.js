@@ -28,7 +28,7 @@ var debugMode = true;
 
 // The following should lead to the folder on your computer that contains the sounds
 // and music that you want the bot to play over voice channels.
-var audioDirectory = "";
+var audioDirectory = "C:/Users/Jimmy/Documents/Code/Discord Bot/Discord Audio/";
 
 // pre:		filesArray is an array of strings
 //				fileName is a string
@@ -85,10 +85,8 @@ function joinChannel(voiceChannel) {
 		}
 		return true;
 	} else {
-		if (debugMode) {
-			console.log("Attempted to join " + voiceChannel.name + 
-						" with insufficient permissions");
-		}
+		if (debugMode) console.log(
+		"Attempted to join " + voiceChannel.name + " with insufficient permissions");
 		return false;
 	}
 }
