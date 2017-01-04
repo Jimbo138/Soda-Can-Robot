@@ -69,20 +69,28 @@ function play(fileName, msg, inputDirectory) {
 function joinChannel(voiceChannel) {
 	// if we are currently connected to a voice channel, we must disconnect before attempting
 	// to join another channel.
-	if (currentConnection != null) {
-		currentConnection.disconnect();
-		currentConnection = null;
-	}
-	// try/catch for joining a channel, in case an unforeseen error occurs.
-	try {
-		voiceChannel.join().then(connection => {
-			currentConnection = connection; 
-		});
-	} catch (err) {
-		console.log("voiceChannel.join() method error: " + err.message);
+	if (voiceChannel.joinable) {
+		if (currentConnection != null) {
+			currentConnection.disconnect();
+			currentConnection = null;
+		}
+		// try/catch for joining a channel, in case an unforeseen error occurs.
+		try {
+			voiceChannel.join().then(connection => {
+				currentConnection = connection; 
+			});
+		} catch (err) {
+			console.log("voiceChannel.join() method error: " + err.message);
+			return false;
+		}
+		return true;
+	} else {
+		if (debugMode) {
+			console.log("Attempted to join " + voiceChannel.name + 
+						" with insufficient permissions");
+		}
 		return false;
 	}
-	return true;
 }
 
 // Fires every time the bot sees a message.
@@ -98,7 +106,7 @@ bot.on("message", msg => {
 				msg.reply("Attempting to join your voice channel.");
 				if (msg.member.voiceChannel != null) {
 					if (!joinChannel(msg.member.voiceChannel)) {
-						msg.reply("Could not join due to error: " + err.message);
+						msg.reply("Could not join due to an error.");
 					}
 				} else {
 					msg.reply("Error! You are not connected to a voice channel that I can see.");
