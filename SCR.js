@@ -1,8 +1,8 @@
 /*	
- *	Soda Can Robot Version 5.5
+ *	Soda Can Robot Version 6
  *	A Discord Voice Robot
  *	By Jimbo138
- *	Requires Node.js, Discord.js, ffmpeg, and mathjs
+ *	Requires Node.js, Discord.js, ffmpeg, mathjs, nope-opus, and opusscript
  */	
 
 // used to scan for sound files in specified folders
@@ -26,9 +26,9 @@ var currentConnection;
 // joins or leaves channels, or executes commands.
 var debugMode = true;
 
-// The following should lead to the folders on your computer that contain the sounds
+// The following should lead to the folder on your computer that contains the sounds
 // and music that you want the bot to play over voice channels.
-var audioDirectory = ""
+var audioDirectory = "C:/Users/Jimmy/Documents/Code/Discord Bot/Discord Audio/";
 
 // pre:		filesArray is an array of strings
 //				fileName is a string
@@ -69,26 +69,24 @@ function play(fileName, msg, inputDirectory) {
 function joinChannel(voiceChannel) {
 	// if we are currently connected to a voice channel, we must disconnect before attempting
 	// to join another channel.
-	if (currentConnection != null) {
-		currentConnection.disconnect();
-		currentConnection = null;
-	}
-	// try/catch for joining a channel, in case an unforeseen error occurs.
-	try {
-		voiceChannel.join().then(connection => {
-			currentConnection = connection; 
-		});
-	} catch (err) {
-		console.log("voiceChannel.join() method error: " + err.message);
-		return false;
-	}
-	// if currentConnections.array().length > 0 that means that we are currently connected to at 
-	// least 1 server and must return true. False will be returned if it is 0 and we are not connected
-	// to any voice channels.
-	if (bot.voiceConnections.array().length > 0) {
-		if (debugmode) console.log("Joined voice channel: " + voiceChannel.name);
+	if (voiceChannel.joinable) {
+		if (currentConnection != null) {
+			currentConnection.disconnect();
+			currentConnection = null;
+		}
+		// try/catch for joining a channel, in case an unforeseen error occurs.
+		try {
+			voiceChannel.join().then(connection => {
+				currentConnection = connection; 
+			});
+		} catch (err) {
+			console.log("voiceChannel.join() method error: " + err.message);
+			return false;
+		}
 		return true;
 	} else {
+		if (debugMode) console.log(
+		"Attempted to join " + voiceChannel.name + " with insufficient permissions");
 		return false;
 	}
 }
@@ -104,14 +102,16 @@ bot.on("message", msg => {
 			if (msg.content.toLowerCase() === commandPrefix + "join") {
 				if (debugMode) console.log("ATTEMPTING TO JOIN A CHANNEL");
 				msg.reply("Attempting to join your voice channel.");
-				if (joinChannel(msg.member.voiceChannel)) {
-					msg.channel.sendMessage("Success.");
-					if (debugMode) console.log("  SUCCESS");
+				if (msg.member.voiceChannel != null) {
+					if (!joinChannel(msg.member.voiceChannel)) {
+						msg.reply("Could not join due to an error.");
+					}
 				} else {
-					msg.channel.sendMessage("Error, could not join.");
-					if (debugMode) console.log("  FAILURE");
+					msg.reply("Error! You are not connected to a voice channel that I can see.");
 				}
+				msg.reply("Attempt completed.");
 			}
+			
 			else if (msg.content.toLowerCase().startsWith(commandPrefix + "eval:") &
 					msg.author.id === "202284467929219072") {
 				try {
