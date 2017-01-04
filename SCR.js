@@ -2,7 +2,7 @@
  *	Soda Can Robot Version 6
  *	A Discord Voice Robot
  *	By Jimbo138
- *	Requires Node.js, Discord.js, ffmpeg, and mathjs
+ *	Requires Node.js, Discord.js, ffmpeg, mathjs, nope-opus, and opusscript
  */	
 
 // used to scan for sound files in specified folders
