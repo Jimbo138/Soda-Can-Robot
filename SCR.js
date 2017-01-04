@@ -28,7 +28,7 @@ var debugMode = true;
 
 // The following should lead to the folder on your computer that contains the sounds
 // and music that you want the bot to play over voice channels.
-var audioDirectory = "C:/Users/Jimmy/Documents/Code/Discord Bot/Discord Audio/";
+var audioDirectory = "";
 
 // pre:		filesArray is an array of strings
 //				fileName is a string
