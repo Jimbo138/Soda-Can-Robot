@@ -22,6 +22,10 @@ var playPrefix = "^";
 // This is not initialized until the bot actually joins a channel.
 var currentConnection;
 
+// This is the dispatcher. It is a streamDispatcher object that is used to play
+// files over voice. This is a variable so that sounds can be stopped.
+var dispatcher;
+
 // Set this to false if you do not want console output whenever the bot plays sounds,
 // joins or leaves channels, or executes commands.
 var debugMode = true;
@@ -57,8 +61,9 @@ function play(fileName, msg, inputDirectory) {
 	if (currentConnection != null) {
 		fs.readdir(inputDirectory, (err, files) => {
 			if (contains(files, fileName)) {
+				if (dispatcher != null) dispatcher.stop();
 				if (debugMode) console.log("Playing sound:    " + fileName);
-				currentConnection.playFile(inputDirectory + fileName);
+				dispatcher = currentConnection.playFile(inputDirectory + fileName);
 			} else {
 				if (debugMode) console.log("Invalid sound:    " + fileName);
 				msg.channel.sendMessage("Sorry, that file does not exist.");
@@ -138,11 +143,7 @@ bot.on("message", msg => {
 					msg.content.toLowerCase() === commandPrefix + "stop" |
 					msg.content.toLowerCase() === commandPrefix + "s") {
 				if (debugMode) console.log("  Silencing");
-				// not using play(fileName, msg) function since fileName "../silence.mp3" will not
-				// pass the contains(files, fileName) check.
-				if (currentConnection != null) {
-					currentConnection.playFile(audioDirectory + "../silence.mp3");
-				}
+				if (dispatcher != null) dispatcher.end();
 			}
 
 			// Leaves the current voice channel if connected,
