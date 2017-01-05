@@ -1,5 +1,5 @@
 /*
- *	Soda Can Robot Version 6
+ *	Soda Can Robot Version 7b
  *	A Discord Voice Robot
  *	By Jimbo138
  *	Requires Node.js, Discord.js version 11, ffmpeg, mathjs, nope-opus, and opusscript
@@ -35,8 +35,12 @@ var audioDirectory = "C:/Users/Jimmy/Documents/Code/Discord Bot/Discord Audio/";
 // post: 	returns true if filesArray contains fileName
 //				returns false otherwise
 function contains(filesArray, fileName) {
-	for (let i = 0; i < filesArray.length; i++) {
-		if (filesArray[i].toLowerCase() === fileName.toLowerCase()) return true;
+	try {
+		for (let i = 0; i < filesArray.length; i++) {
+			if (filesArray[i].toLowerCase() === fileName.toLowerCase()) return true;
+		}
+	} catch (err) {
+		console.log(err.message);
 	}
 	return false;
 }
@@ -47,6 +51,9 @@ function contains(filesArray, fileName) {
 //				if bot is not connected to a voice channel, or fileName is invalid,
 //				bot will post this in the chat channel that msg originated from.
 function play(fileName, msg, inputDirectory) {
+	if (inputDirectory.substring(inputDirectory.length - 1) != "/") {
+		inputDirectory += "/";
+	}
 	if (currentConnection != null) {
 		fs.readdir(inputDirectory, (err, files) => {
 			if (contains(files, fileName)) {
@@ -109,7 +116,7 @@ bot.on("message", msg => {
 				} else {
 					msg.reply("Error! You are not connected to a voice channel that I can see.");
 				}
-				msg.reply("Attempt completed.");
+				if (debugMode) console.log("Attempt completed.");
 			}
 
 			else if (msg.content.toLowerCase().startsWith(commandPrefix + "eval:") &
@@ -159,24 +166,49 @@ bot.on("message", msg => {
 			}
 
 			// Plays a random sound
-			else if (msg.content.toLowerCase() === commandPrefix + "random") {
+			else if (msg.content.toLowerCase().startsWith(commandPrefix + "random")) {
 				fs.readdir(audioDirectory, (err, files) => {
-					let fileName = files[math.randomInt(0, files.length - 1)];
-					if (debugMode) console.log("Attempting to play a random sound.");
-					play(fileName, msg, audioDirectory);
+					if (msg.content.length > 8) {
+						if (files.toString().includes(msg.content.substring(8))) {
+							let directory = audioDirectory + msg.content.substring(8);
+							fs.readdir(directory, (err, files) => {
+								let fileName = files[math.randomInt(0, files.length - 1)];
+								if (debugMode) console.log("Attempting to play a random sound.");
+								play(fileName, msg, directory);
+							});
+						} else {
+							msg.reply("That directory does not exist.");
+						}
+					} else {
+						let fileName = files[math.randomInt(0, files.length - 1)];
+						if (debugMode) console.log("Attempting to play a random sound.");
+						play(fileName, msg, audioDirectory);
+					}
 				});
 			}
 
 			// sends a message containing all files that can be played
 			// to the same text channel the request was received from.
 			else if (msg.content.toLowerCase().startsWith(commandPrefix + "index")) {
-				let inputDirectory = audioDirectory;
-				if (msg.content.substring(msg.content.length - 7) == "boosted") {
-					inputDirectory += "boosted/";
-				}
-				fs.readdir(inputDirectory, (err, files) => {
-					if (debugMode) console.log("Serving INDEX");
-					msg.channel.sendMessage("```" + files.toString().replace(/,/g, "\n") + "```");
+				let directory = audioDirectory;
+				var result = "";
+				fs.readdir(directory, (err, files) => {
+					result = files.toString();
+					if (msg.content.length > 7) {
+						if (result.includes(msg.content.substring(7))) {
+							directory = directory + msg.content.substring(7);
+							fs.readdir(directory, (err, files) => {
+								result = files.toString();
+								msg.channel.sendMessage("```" + result.replace(/,/g, "\n") + "```");
+							});
+							if (debugMode) console.log("Serving INDEX of " + directory);
+						} else {
+							msg.reply("That direcotry does not exist.");
+						}
+					} else {
+						msg.channel.sendMessage("```" + result.replace(/,/g, "\n") + "```");
+						if (debugMode) console.log("Serving INDEX of " + directory);
+					}
 				});
 			}
 
@@ -203,13 +235,12 @@ bot.on("message", msg => {
 		// string following the playPrefix.
 		} else if (msg.content.startsWith(playPrefix)) {
 			let fileName = msg.content.substring(1);
-			if (fileName.substring(fileName.length - 4) !== ".mp3") {
-				fileName = fileName + ".mp3";
-			}
 			let inputDirectory = audioDirectory;
-			if (fileName.substring(0,8) == "boosted/" & msg.author.id === "202284467929219072") {
-				inputDirectory += "boosted/";
-				fileName = fileName.substring(8);
+			if (fileName.substring(fileName.length - 4) !== ".mp3") fileName = fileName + ".mp3";
+			if (fileName.includes("/")) { // currently this only supports "1-deep" folders.
+				inputDirectory = inputDirectory + fileName.substring(0,fileName.indexOf("/") + 1);
+				fileName = fileName.substring(fileName.indexOf("/") + 1);
+				fileName.indexOf("/");
 			}
 			play(fileName, msg, inputDirectory);
 		}
