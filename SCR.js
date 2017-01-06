@@ -1,5 +1,5 @@
 /*
- *	Soda Can Robot Version 7b
+ *	Soda Can Robot Version 6.8
  *	A Discord Voice Robot
  *	By Jimbo138
  *	Requires Node.js, Discord.js version 11, ffmpeg, mathjs, nope-opus, and opusscript
@@ -32,7 +32,11 @@ var debugMode = true;
 
 // The following should lead to the folder on your computer that contains the sounds
 // and music that you want the bot to play over voice channels.
-var audioDirectory = "C:/Users/Jimmy/Documents/Code/Discord Bot/Discord Audio/";
+var audioDirectory = "";
+
+// This is the Discord User ID for the individual who is running the robot. This is included so that
+// other users cannot use the eval command since it is a huge security risk.
+var myID = "";
 
 // pre:		filesArray is an array of strings
 //				fileName is a string
@@ -125,7 +129,7 @@ bot.on("message", msg => {
 			}
 
 			else if (msg.content.toLowerCase().startsWith(commandPrefix + "eval:") &
-					msg.author.id === "202284467929219072") {
+					msg.author.id === myID) {
 				try {
 					eval(msg.content.substring(6));
 					if (debugMode) console.log("EVALUATED:   " + msg.content.substring(6));
