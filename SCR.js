@@ -34,6 +34,17 @@ var debugMode = true;
 // and music that you want the bot to play over voice channels.
 var audioDirectory = "";
 
+// The userThemes map will take user IDs as keys and will have their values
+// be mapped to arrays containing information regarding the filepath of the theme song
+// as well as whether or not the user wants their theme song to play when they join the bot's
+// current voice channel.
+var userThemes;
+/*
+ *	Obviously I will need to do a little bit of research regarding this feature
+ *	first. I will need to create a separate js file containing methods for reading/writing
+ *	userTheme files for saving and loading onto the robot.
+ */
+
 // This is the Discord User ID for the individual who is running the robot. This is included so that
 // other users cannot use the eval command since it is a huge security risk.
 var myID = "";
@@ -153,7 +164,7 @@ bot.on("message", msg => {
 			// Leaves the current voice channel if connected,
 			// and sets currentConnection to null.
 			else if (msg.content.toLowerCase() === commandPrefix + "leave" |
-							msg.content.toLowerCase() === commandPrefix + "disconnect") {
+					msg.content.toLowerCase() === commandPrefix + "disconnect") {
 				if (currentConnection != null) {
 					if (debugMode) console.log("LEAVING VOICE CHANNEL");
 					msg.channel.sendMessage("Leaving voice channel.");
@@ -166,6 +177,7 @@ bot.on("message", msg => {
 			else if (msg.content.toLowerCase() === commandPrefix + "shutdown") {
 				if (debugMode) console.log("SHUTTING DOWN");
 				msg.channel.sendMessage("Goodbye.");
+				if (dispatcher != null) dispatcher.end();
 				if (currentConnection != null) currentConnection.disconnect();
 				bot.destroy();
 			}
