@@ -10,7 +10,10 @@ var fs = require("fs");
 
 // used to generate random numbers to play random sounds
 var math = require("mathjs");
+// required for interaction with Discord
 var Discord = require("discord.js");
+
+// initialize the bot
 var bot = new Discord.Client();
 
 // The bot looks for these prefixes in the discord text chat to activate commands and play sounds.
@@ -174,6 +177,8 @@ bot.on("message", msg => {
 			}
 
 			// Shuts the bot down.
+			// Ends dispatcher if !null
+			// Disconnects currentConnection if !null
 			else if (msg.content.toLowerCase() === commandPrefix + "shutdown") {
 				if (debugMode) console.log("SHUTTING DOWN");
 				msg.channel.sendMessage("Goodbye.");
@@ -220,7 +225,7 @@ bot.on("message", msg => {
 							});
 							if (debugMode) console.log("Serving INDEX of " + directory);
 						} else {
-							msg.reply("That direcotry does not exist.");
+							msg.reply("That directory does not exist.");
 						}
 					} else {
 						msg.channel.sendMessage("```" + result.replace(/,/g, "\n") + "```");
@@ -233,6 +238,26 @@ bot.on("message", msg => {
 			// bot to the same text channel the request was received from.
 			else if (msg.content.toLowerCase() === commandPrefix + "help") {
 				if (debugMode) console.log("Serving HELP");
+				result = "";
+				commands = { // need to do another once-over to make sure everything is consistent
+					"'help' will display this menu",
+					"'join' will make me join your voice channel",
+					"'leave' will make me disconnect from the voice channel",
+					"'index' will display all files within the general index. If followed by a" +
+					" subdirectory name, it will display all files within that folder instead.",
+					"'indices' will display all folders within the general folder. If followed" +
+					" by a subdirectory name, it will display all files within that folder instead.",
+					"'random' will play a random sound. If followed by the name of a subfolder," +
+					" it will play a random sound from the specified subfolder only.",
+					"'silence', 'stop', or 's'"
+				};
+
+				for (i = 0, i < commands.size()) {// loop through all commands, add them to the string with appropriate prefixes
+
+				}
+				result += ""; // add the playFile function and the ending ```
+				msg.channel.sendMessage(result);
+				/*
 				msg.channel.sendMessage("```Availible commands: \n" +
 					"'" + commandPrefix + "help' will display this menu (in case you didn't already know)\n" +
 					"'" + commandPrefix + "join' will make me join your voice channel\n" +
@@ -242,15 +267,18 @@ bot.on("message", msg => {
 					"'" + commandPrefix + "random' will play a random sound\n" +
 					"'" + commandPrefix + "silence' will make me be quiet\n" +
 					"'" + playPrefix + "' followed by a valid file name will play a sound" +
-					"```")
+					"```");
+				*/
+
+
 			}
 
 			else {
 				msg.channel.sendMessage("Command not recognized.");
 			}
-		// attempts to play the a file with the name matching the
-		// string following the playPrefix.
-		} else if (msg.content.startsWith(playPrefix)) {
+		}
+		// attempts to play the file with the name matching the string following playPrefix.
+		else if (msg.content.startsWith(playPrefix)) {
 			let fileName = msg.content.substring(1);
 			let inputDirectory = audioDirectory;
 			if (fileName.substring(fileName.length - 4) !== ".mp3") fileName = fileName + ".mp3";
