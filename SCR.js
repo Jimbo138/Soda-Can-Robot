@@ -35,6 +35,7 @@ var debugMode = true;
 
 // The following should lead to the folder on your computer that contains the sounds
 // and music that you want the bot to play over voice channels.
+// must end with a '/' character.
 var audioDirectory = "";
 
 // The userThemes map will take user IDs as keys and will have their values
@@ -52,6 +53,9 @@ var userThemes;
 // other users cannot use the eval command since it is a huge security risk.
 var myID = "";
 
+// when true,
+var locked = false;
+
 // pre:		filesArray is an array of strings
 //				fileName is a string
 // post: 	returns true if filesArray contains fileName
@@ -59,7 +63,8 @@ var myID = "";
 function contains(filesArray, fileName) {
 	try {
 		for (let i = 0; i < filesArray.length; i++) {
-			if (filesArray[i].toLowerCase() === fileName.toLowerCase()) return true;
+			if (filesArray[i].toLowerCase() === fileName.toLowerCase())
+			 	return true;
 		}
 	} catch (err) {
 		console.log(err.message);
@@ -73,28 +78,38 @@ function contains(filesArray, fileName) {
 //				if bot is not connected to a voice channel, or fileName is invalid,
 //				bot will post this in the chat channel that msg originated from.
 function play(fileName, msg, inputDirectory) {
-	if (inputDirectory.substring(inputDirectory.length - 1) != "/") {
-		inputDirectory += "/";
+	if (fileName.substring(fileName.length - 4) !== ".mp3")
+		fileName = fileName + ".mp3";
+	while (fileName.includes("/")) {
+		inputDirectory = inputDirectory + fileName.substring(0,fileName.indexOf("/") + 1);
+		fileName = fileName.substring(fileName.indexOf("/") + 1);
 	}
+	if (inputDirectory.substring(inputDirectory.length - 1) != "/")
+		inputDirectory += "/";
 	if (currentConnection != null) {
 		fs.readdir(inputDirectory, (err, files) => {
 			if (contains(files, fileName)) {
-				if (dispatcher != null) dispatcher.stop();
-				if (debugMode) console.log("Playing sound:    " + fileName);
+				if (dispatcher != null) {
+					dispatcher.end();
+				}
+				if (debugMode)
+					console.log("Playing sound:    " + fileName);
 				dispatcher = currentConnection.playFile(inputDirectory + fileName);
 			} else {
-				if (debugMode) console.log("Invalid sound:    " + fileName);
+				if (debugMode)
+					console.log("Invalid sound:    " + fileName);
 				msg.channel.sendMessage("Sorry, that file does not exist.");
 			}
 		});
 	} else {
-		if (debugMode) console.log("Attempted to play a sound while not connected to a voice channel.");
+		if (debugMode)
+			console.log("Attempted to play a sound while not connected to a voice channel.");
 		msg.channel.sendMessage("I am not connected to a voice channel.");
 	}
 }
 
 // pre: 	Parameter voiceChannel is a Discord.VoiceChannel object
-//				The bot has the proper permissions to join the voice channel
+//			The bot has the proper permissions to join the voice channel
 // post: 	The bot will join the voiceChannel
 function joinChannel(voiceChannel) {
 	// if we are currently connected to a voice channel, we must disconnect before attempting
@@ -110,13 +125,13 @@ function joinChannel(voiceChannel) {
 				currentConnection = connection;
 			});
 		} catch (err) {
-			console.log("voiceChannel.join() method error: " + err.message);
+			console.log("voiceChannel.join() error: " + err.message);
 			return false;
 		}
 		return true;
 	} else {
-		if (debugMode) console.log(
-		"Attempted to join " + voiceChannel.name + " with insufficient permissions");
+		if (debugMode)
+			console.log("Tried to join " + voiceChannel.name + " w/ insufficient permission");
 		return false;
 	}
 }
@@ -125,176 +140,187 @@ function joinChannel(voiceChannel) {
 bot.on("message", msg => {
 	// ignore messages sent by bots or sent through direct messages.
 	if (!msg.author.bot | msg.channel.type != 'dm') {
-		if (msg.content.startsWith(commandPrefix)) {
-			// Attempts to join the voice channel the
-			// message's sender is connected to, if the sender
-			// is connected to a voice channel at all.
-			if (msg.content.toLowerCase() === commandPrefix + "join") {
-				if (debugMode) console.log("ATTEMPTING TO JOIN A CHANNEL");
-				msg.reply("Attempting to join your voice channel.");
-				if (msg.member.voiceChannel != null) {
-					if (!joinChannel(msg.member.voiceChannel)) {
+		if (locked = false | msg.author.id === myID) {
+			if (msg.content.startsWith(commandPrefix)) {
+				let userMessage = msg.content.toLowerCase().substring(commandPrefix.length);
+				// Attempts to join the voice channel the
+				// message's sender is connected to, if the sender
+				// is connected to a voice channel at all.
+				if (userMessage === "join") {
+					if (debugMode)
+						console.log("ATTEMPTING TO JOIN A CHANNEL");
+					if (!joinChannel(msg.member.voiceChannel))
 						msg.reply("Could not join due to an error.");
+					if (debugMode)
+						console.log("Attempt completed.");
+				}
+
+				//
+				else if (userMessage.startsWith("eval") & msg.author.id === myID) {
+					try {
+						eval(msg.content.substring(5));
+						if (debugMode)
+							console.log("EVALUATED:   " + msg.content.substring(5));
+					} catch (e) {
+						msg.channel.sendMessage(e.message);
+						console.log("eval error:")
+						console.log("code:       " + msg.content.substring(5));
+						console.log("message:     " + e.message);
 					}
-				} else {
-					msg.reply("Error! You are not connected to a voice channel that I can see.");
 				}
-				if (debugMode) console.log("Attempt completed.");
-			}
 
-			else if (msg.content.toLowerCase().startsWith(commandPrefix + "eval:") &
-					msg.author.id === myID) {
-				try {
-					eval(msg.content.substring(6));
-					if (debugMode) console.log("EVALUATED:   " + msg.content.substring(6));
-				} catch (e) {
-					msg.channel.sendMessage(e.message);
-					console.log("eval error:")
-					console.log("code:       " + msg.content.substring(6));
-					console.log("message:     " + e.message);
+				// plays a blank sound file to override any
+				// currently playing sounds.
+				else if (userMessage === "silence" |
+						userMessage === "stop" |
+						userMessage === "s") {
+					if (debugMode)
+						console.log("Silencing");
+					if (dispatcher != null) {
+						dispatcher.end();
+						dispatcher = null;
+					}
 				}
-			}
 
-			// plays a blank sound file to override any
-			// currently playing sounds.
-			else if (msg.content.toLowerCase() === commandPrefix + "silence" |
-					msg.content.toLowerCase() === commandPrefix + "stop" |
-					msg.content.toLowerCase() === commandPrefix + "s") {
-				if (debugMode) console.log("  Silencing");
-				if (dispatcher != null) dispatcher.end();
-			}
-
-			// Leaves the current voice channel if connected,
-			// and sets currentConnection to null.
-			else if (msg.content.toLowerCase() === commandPrefix + "leave" |
-					msg.content.toLowerCase() === commandPrefix + "disconnect") {
-				if (currentConnection != null) {
-					if (debugMode) console.log("LEAVING VOICE CHANNEL");
-					msg.channel.sendMessage("Leaving voice channel.");
-					currentConnection.disconnect();
-					currentConnection = null;
+				// Leaves the current voice channel if connected,
+				// and sets currentConnection to null.
+				else if (userMessage === "leave" |
+						userMessage === "disconnect") {
+					if (currentConnection != null) {
+						if (debugMode)
+							console.log("LEAVING VOICE CHANNEL");
+						msg.channel.sendMessage("Leaving voice channel.");
+						currentConnection.disconnect();
+						currentConnection = null;
+						dispatcher = null;
+					}
 				}
-			}
 
-			// Shuts the bot down.
-			// Ends dispatcher if !null
-			// Disconnects currentConnection if !null
-			else if (msg.content.toLowerCase() === commandPrefix + "shutdown") {
-				if (debugMode) console.log("SHUTTING DOWN");
-				msg.channel.sendMessage("Goodbye.");
-				if (dispatcher != null) dispatcher.end();
-				if (currentConnection != null) currentConnection.disconnect();
-				bot.destroy();
-			}
+				// Shuts the bot down.
+				// Ends dispatcher if !null
+				// Disconnects currentConnection if !null
+				else if (userMessage === "shutdown") {
+					if (debugMode)
+						console.log("SHUTTING DOWN");
+					msg.channel.sendMessage("Goodbye.");
+					if (dispatcher != null)
+						dispatcher.end();
+					if (currentConnection != null)
+						currentConnection.disconnect();
+					bot.destroy();
+				}
 
-			// Plays a random sound
-			else if (msg.content.toLowerCase().startsWith(commandPrefix + "random")) {
-				fs.readdir(audioDirectory, (err, files) => {
-					if (msg.content.length > 8) {
-						if (files.toString().includes(msg.content.substring(8))) {
-							let directory = audioDirectory + msg.content.substring(8);
-							fs.readdir(directory, (err, files) => {
-								let fileName = files[math.randomInt(0, files.length - 1)];
-								if (debugMode) console.log("Attempting to play a random sound.");
-								play(fileName, msg, directory);
-							});
+				// Plays a random sound
+				else if (userMessage.startsWith("random")) {
+					let directory = audioDirectory + msg.content.substring(8);
+					fs.readdir(directory, (err, files) => {
+						if (files == null) {
+							msg.reply("Invalid directory.");
 						} else {
-							msg.reply("That directory does not exist.");
+							let fileName = files[math.randomInt(0, files.length - 1)];
+							if (debugMode)
+								console.log("Attempting to play a random sound.");
+							play(fileName, msg, directory);
 						}
-					} else {
-						let fileName = files[math.randomInt(0, files.length - 1)];
-						if (debugMode) console.log("Attempting to play a random sound.");
-						play(fileName, msg, audioDirectory);
-					}
-				});
-			}
-
-			// sends a message containing all files that can be played
-			// to the same text channel the request was received from.
-			else if (msg.content.toLowerCase().startsWith(commandPrefix + "index")) {
-				let directory = audioDirectory;
-				var result = "";
-				fs.readdir(directory, (err, files) => {
-					result = files.toString();
-					if (msg.content.length > 7) {
-						if (result.includes(msg.content.substring(7))) {
-							directory = directory + msg.content.substring(7);
-							fs.readdir(directory, (err, files) => {
-								result = files.toString();
-								msg.channel.sendMessage("```" + result.replace(/,/g, "\n") + "```");
-							});
-							if (debugMode) console.log("Serving INDEX of " + directory);
-						} else {
-							msg.reply("That directory does not exist.");
-						}
-					} else {
-						msg.channel.sendMessage("```" + result.replace(/,/g, "\n") + "```");
-						if (debugMode) console.log("Serving INDEX of " + directory);
-					}
-				});
-			}
-
-			// sends a message containing information on how to use the
-			// bot to the same text channel the request was received from.
-			else if (msg.content.toLowerCase() === commandPrefix + "help") {
-				if (debugMode) console.log("Serving HELP");
-				result = "";
-				commands = { // need to do another once-over to make sure everything is consistent
-					"'help' will display this menu",
-					"'join' will make me join your voice channel",
-					"'leave' will make me disconnect from the voice channel",
-					"'index' will display all files within the general index. If followed by a" +
-					" subdirectory name, it will display all files within that folder instead.",
-					"'indices' will display all folders within the general folder. If followed" +
-					" by a subdirectory name, it will display all files within that folder instead.",
-					"'random' will play a random sound. If followed by the name of a subfolder," +
-					" it will play a random sound from the specified subfolder only.",
-					"'silence', 'stop', or 's'"
-				};
-
-				for (i = 0, i < commands.size()) {// loop through all commands, add them to the string with appropriate prefixes
-
+					});
 				}
-				result += ""; // add the playFile function and the ending ```
-				msg.channel.sendMessage(result);
-				/*
-				msg.channel.sendMessage("```Availible commands: \n" +
-					"'" + commandPrefix + "help' will display this menu (in case you didn't already know)\n" +
-					"'" + commandPrefix + "join' will make me join your voice channel\n" +
-					"'" + commandPrefix + "leave' will make me disconnect from voice\n" +
-					"'" + commandPrefix + "index' will display all sounds that you can play\n" +
-					"'" + commandPrefix + "index boosted' will display all boosted sounds you can play\n" +
-					"'" + commandPrefix + "random' will play a random sound\n" +
-					"'" + commandPrefix + "silence' will make me be quiet\n" +
-					"'" + playPrefix + "' followed by a valid file name will play a sound" +
-					"```");
-				*/
 
+				// sends a message containing all files that can be played
+				// to the same text channel the request was received from.
+				else if (userMessage.startsWith("index")) {
+					let directory = audioDirectory + msg.content.substring(9);
+					fs.readdir(directory, (err, files) => {
+						if (files != null) {
+							for (i = 0; i < files.length; i++) {
+								if (!files[i].includes('.')) {
+									files.splice(i,1);
+									i--;
+								}
+							}
+							let result = files.toString();
+							msg.channel.sendMessage("```" + result.replace(/,/g, "\n") + "```");
+							if (debugMode)
+								console.log("Serving INDEX of " + directory);
+						} else {
+							msg.reply("Invalid directory.")
+						}
+					});
+				}
 
-			}
+				else if (userMessage.startsWith("indices")) {
+					// base this off of index, except have it omit all strings containing periods
+					let directory = audioDirectory + msg.content.substring(9);
+					fs.readdir(directory, (err, files) => {
+						if (files != null) {
+							for (i = 0; i < files.length; i++) {
+								if (files[i].includes('.')) {
+									files.splice(i,1);
+									i--;
+								}
+							}
+							let result = files.toString();
+							msg.channel.sendMessage("```" + result.replace(/,/g, "\n") + "```");
+							if (debugMode)
+								console.log("Serving INDEX of " + directory);
+						} else {
+							msg.reply("Invalid directory.")
+						}
+					});
+				}
 
-			else {
-				msg.channel.sendMessage("Command not recognized.");
+				else if (userMessage.startsWith("vol")) {
+					value = msg.content.substring(msg.content.indexOf(' ') + 1);
+					if (dispatcher != null)
+						dispatcher.setVolumeDecibels(value);
+				}
+
+				// sends a message containing information on how to use the
+				// bot to the same text channel the request was received from.
+				else if (userMessage === "help") {
+					if (debugMode)
+						console.log("Serving HELP");
+					result = "```";
+					commands = [ // need to do another once-over to make sure everything is consistent
+						"'help' will display this menu",
+						"'join' will make me join your voice channel.",
+						"'leave' will make me disconnect from the voice channel.",
+						"'index' will display all files within the general index. If followed by a" +
+							" subdirectory name, it will display all files within that folder instead.",
+						"'indices' will display all folders within the general folder. If followed" +
+							" by a subdirectory name, it will display all files within that folder instead.",
+						"'random' will play a random sound. If followed by the name of a subfolder," +
+							" it will play a random sound from the specified subfolder only.",
+						"'silence', 'stop', or 's' will stop the current sound that is playing."
+					];
+
+					for (i = 0; i < commands.length; i++) {// loop through all commands, add them to the string with appropriate prefixes
+						result += commands[i] + "\n\n";
+					}
+					result += "If I am connected to voice, " + playPrefix +
+					" followed by a valid filepath will play the specified sound. ```"; // add the playFile function and the ending ```
+					msg.channel.sendMessage(result);
+				}
+
+				// We have reached the end of all recognizable commands. Since there have been no
+				// matches, the robot will inform the user that their request was invalid.
+				else {
+					msg.channel.sendMessage("Command not recognized. Request invalid.");
+				}
 			}
-		}
-		// attempts to play the file with the name matching the string following playPrefix.
-		else if (msg.content.startsWith(playPrefix)) {
-			let fileName = msg.content.substring(1);
-			let inputDirectory = audioDirectory;
-			if (fileName.substring(fileName.length - 4) !== ".mp3") fileName = fileName + ".mp3";
-			if (fileName.includes("/")) { // currently this only supports "1-deep" folders.
-				inputDirectory = inputDirectory + fileName.substring(0,fileName.indexOf("/") + 1);
-				fileName = fileName.substring(fileName.indexOf("/") + 1);
-				fileName.indexOf("/");
+			// attempts to play the file with the name matching the string following playPrefix.
+			else if (msg.content.startsWith(playPrefix)) {
+				let fileName = msg.content.substring(1);
+				let inputDirectory = audioDirectory;
+				play(fileName, msg, inputDirectory);
 			}
-			play(fileName, msg, inputDirectory);
 		}
 	}
 });
 
 bot.on("ready", () => {
 	console.log("Bot activated");
-  if (debugMode) console.log("debugMode enabled");
+  if (debugMode)
+  	console.log("debugMode enabled");
 });
 
 // The token for the bot goes between the quotes in the following line.
